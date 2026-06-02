@@ -27,7 +27,19 @@ Create a small cast of personas that can look at the same signal from different 
 From the repository root:
 
 ```bash
-python3 shared/scripts/persona_sampler.py   --constants shared/references/persona_constants.json   --news "AI 데이터센터 전력 수요 급증"   --count 4   --seed 7   --with-patterns
+python3 shared/scripts/persona_sampler.py \
+  --constants shared/references/persona_constants.expanded.json \
+  --news "AI 데이터센터 전력 수요 급증" \
+  --count 4 \
+  --seed 7 \
+  --with-patterns
+```
+
+If the expanded file is missing or stale, rebuild it:
+
+```bash
+python3 shared/scripts/build_constants_from_hf.py \
+  --output shared/references/persona_constants.expanded.json
 ```
 
 ## Casting Rules

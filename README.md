@@ -39,22 +39,45 @@ skills/
 ```text
 shared/
 ├── references/
-│   └── persona_constants.json
+│   ├── persona_constants.json
+│   └── persona_constants.expanded.json
 └── scripts/
+    ├── build_constants_from_hf.py
     ├── persona_sampler.py
+    ├── test_expanded_constants.py
     └── test_persona_sampler.py
 ```
+
+`persona_constants.expanded.json` is a compact derived constant file built from
+[nvidia/Nemotron-Personas-Korea](https://huggingface.co/datasets/nvidia/Nemotron-Personas-Korea)
+(CC-BY-4.0). The raw dataset is not vendored.
 
 ## Quick test
 
 ```bash
-python3 -m pytest shared/scripts/test_persona_sampler.py -q
+python3 -m pytest shared/scripts/test_persona_sampler.py shared/scripts/test_expanded_constants.py -q
 ```
+
+## Rebuild expanded constants
+
+```bash
+python3 shared/scripts/build_constants_from_hf.py \
+  --output shared/references/persona_constants.expanded.json
+```
+
+The builder first tries the Hugging Face datasets-server rows endpoint and falls
+back to the first-rows endpoint if the sampled rows endpoint is rate-limited or
+temporarily unavailable.
 
 ## Sample run
 
 ```bash
-python3 shared/scripts/persona_sampler.py   --constants shared/references/persona_constants.json   --news "AI 데이터센터 전력 수요 급증"   --count 4   --seed 7   --with-patterns
+python3 shared/scripts/persona_sampler.py \
+  --constants shared/references/persona_constants.expanded.json \
+  --news "AI 데이터센터 전력 수요 급증" \
+  --count 4 \
+  --seed 7 \
+  --with-patterns
 ```
 
 ## Local Hermes install

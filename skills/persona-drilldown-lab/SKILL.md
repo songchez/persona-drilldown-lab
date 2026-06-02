@@ -56,8 +56,12 @@ This repository keeps shared constants and scripts outside individual skill fold
 
 ```text
 shared/references/persona_constants.json
+shared/references/persona_constants.expanded.json
+shared/scripts/build_constants_from_hf.py
 shared/scripts/persona_sampler.py
 ```
+
+Prefer `persona_constants.expanded.json` when available. It is a compact derived constant file built from `nvidia/Nemotron-Personas-Korea` (CC-BY-4.0); raw source rows are not vendored.
 
 When installed into Hermes, copy or symlink these into the relevant skill folder if direct `skill_view(..., file_path=...)` access is desired.
 

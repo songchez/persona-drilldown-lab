@@ -20,6 +20,12 @@ def default_constants_path() -> Path:
 def load_constants(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
+    if data.get("schema_version") == 2:
+        required_v2 = ["demographics", "geography", "work", "life", "psychology", "attention", "outlier", "idea_patterns"]
+        missing_v2 = [key for key in required_v2 if key not in data or not data[key]]
+        if missing_v2:
+            raise SystemExit(f"v2 constants file is missing required non-empty keys: {', '.join(missing_v2)}")
+        return data
     required = [
         "age_groups",
         "regions",
@@ -45,6 +51,9 @@ def pick_many(rng: random.Random, items: list[str], min_count: int = 2, max_coun
 
 
 def build_persona(index: int, rng: random.Random, data: dict[str, Any], outlier_rate: float) -> dict[str, Any]:
+    if data.get("schema_version") == 2:
+        return build_persona_v2(index, rng, data, outlier_rate)
+
     is_outlier = rng.random() < outlier_rate
     attention_biases = pick_many(rng, data["attention_biases"])
     persona = {
@@ -60,6 +69,51 @@ def build_persona(index: int, rng: random.Random, data: dict[str, Any], outlier_
         "reaction_style": rng.choice(data["reaction_styles"]),
         "weird_modifier": rng.choice(data["weird_modifiers"]) if is_outlier else None,
         "is_outlier": is_outlier,
+    }
+    return persona
+
+
+def choose(rng: random.Random, items: list[str], fallback: str) -> str:
+    clean = [x for x in items if x]
+    return rng.choice(clean) if clean else fallback
+
+
+def build_persona_v2(index: int, rng: random.Random, data: dict[str, Any], outlier_rate: float) -> dict[str, Any]:
+    is_outlier = rng.random() < outlier_rate
+    demographics = data["demographics"]
+    geography = data["geography"]
+    work = data["work"]
+    life = data["life"]
+    psychology = data["psychology"]
+    attention = data["attention"]
+    outlier = data["outlier"]
+
+    region_bits = [
+        choose(rng, geography.get("provinces", []), "한국"),
+        choose(rng, geography.get("districts", []), "지역 미상"),
+    ]
+    attention_pool = attention.get("attention_biases", [])
+    attention_biases = pick_many(rng, attention_pool, 2, 4) if len(attention_pool) >= 2 else attention_pool
+    persona = {
+        "index": index,
+        "age_group": choose(rng, demographics.get("age_groups", []), "연령 미상"),
+        "region": " ".join(region_bits),
+        "job": choose(rng, work.get("occupations", []), "직업 미상"),
+        "money_state": choose(rng, attention.get("money_triggers", []), "생활비에 민감함"),
+        "digital_literacy": choose(
+            rng,
+            ["낮음", "중간", "높음", "도구는 잘 쓰지만 원리는 모름", "새 도구를 빨리 써보지만 금방 버림"],
+            "중간",
+        ),
+        "core_fear": choose(rng, psychology.get("core_fears", []), "변화에 뒤처지는 것"),
+        "hidden_desire": choose(rng, psychology.get("hidden_desires", []), "불안을 행동으로 바꾸고 싶음"),
+        "attention_biases": attention_biases,
+        "reaction_style": choose(rng, psychology.get("reaction_styles", []), "사례를 보고 움직임"),
+        "weird_modifier": choose(rng, outlier.get("weird_modifiers", []), "특이한 생활 맥락") if is_outlier else None,
+        "is_outlier": is_outlier,
+        "skill": choose(rng, work.get("skills", []), "생활 경험"),
+        "hobby": choose(rng, life.get("hobbies", []), "정보 탐색"),
+        "value_orientation": choose(rng, psychology.get("value_orientations", []), "안정을 중시함"),
     }
     return persona
 
@@ -83,6 +137,8 @@ def render_persona(persona: dict[str, Any], news: str) -> str:
             f"- 숨은 욕망: {persona['hidden_desire']}",
             f"- 관심 편향: {keywords}",
             f"- 반응 스타일: {persona['reaction_style']}",
+            *([f"- 보유 스킬/취미: {persona['skill']} / {persona['hobby']}"] if "skill" in persona else []),
+            *([f"- 가치관: {persona['value_orientation']}"] if "value_orientation" in persona else []),
             f"- 이 뉴스와 연결점: '{news}'를 {keywords} 관점에서 해석할 가능성이 큼",
         ]
     )
